@@ -1,11 +1,87 @@
 import argparse
 from datetime import datetime, date
-from typing import List
+from typing import List, Dict, Any
+from tabulate import tabulate
 
 from .cache_manager import CacheManager
 from .models import Launch, Rocket, Launchpad
+from .util import parse_date
+from .statistics import calculate_launch_frequency, calculate_success_rate_by_rocket, get_launch_statistics
 
 cache_manager = CacheManager()
+
+def display_launches(launches: List[Launch], rockets: List[Rocket], launchpads: List[Launchpad]) -> None:
+    """Display launches in a formatted table"""
+    if not launches:
+        print("No launches found matching the criteria.")
+        return
+    
+    # Create mappings for IDs to names
+    rocket_id_to_name = {rocket.id: rocket.name for rocket in rockets}
+    launchpad_id_to_name = {launchpad.id: launchpad.name for launchpad in launchpads}
+    
+    table_data = []
+    for launch in launches:
+        status = "Upcoming" if launch.upcoming else "Success" if launch.success else "Failure"
+        
+        table_data.append([
+            launch.flight_number,
+            launch.name,
+            launch.date_utc[:10],  # Just the date part
+            rocket_id_to_name.get(launch.rocket, launch.rocket),
+            launchpad_id_to_name.get(launch.launchpad, launch.launchpad),
+            status
+        ])
+    
+    headers = ["Flight #", "Name", "Date", "Rocket", "Launch Site", "Status"]
+    print(tabulate(table_data, headers=headers, tablefmt="grid"))
+
+def display_statistics(statistics: Dict[str, Any]) -> None:
+    """Display statistics in a formatted way"""
+    print("\n=== LAUNCH STATISTICS ===")
+    print(f"Total launches: {statistics['total_launches']}")
+    print(f"Successful launches: {statistics['successful_launches']}")
+    print(f"Failed launches: {statistics['failed_launches']}")
+    print(f"Upcoming launches: {statistics['upcoming_launches']}")
+    print(f"Success rate: {statistics['success_rate']:.2f}%")
+
+def display_success_rates(success_rates: Dict[str, Dict[str, Any]]) -> None:
+    """Display success rates by rocket"""
+    if not success_rates:
+        print("No success rate data available.")
+        return
+    
+    table_data = []
+    for rocket, stats in success_rates.items():
+        table_data.append([
+            rocket,
+            stats['total_launches'],
+            stats['successful_launches'],
+            f"{stats['success_rate']:.2f}%"
+        ])
+    
+    headers = ["Rocket", "Total Launches", "Successful", "Success Rate"]
+    print("\n=== SUCCESS RATES BY ROCKET ===")
+    print(tabulate(table_data, headers=headers, tablefmt="grid"))
+
+def display_launch_frequency(frequency_data: Dict[str, Dict[str, int]]) -> None:
+    """Display launch frequency data"""
+    print("\n=== LAUNCH FREQUENCY ===")
+    
+    # Yearly frequency
+    yearly_data = frequency_data['yearly']
+    if yearly_data:
+        print("\nYearly Launches:")
+        for year, count in sorted(yearly_data.items()):
+            print(f"  {year}: {count} launches")
+    
+    # Monthly frequency (show only recent months)
+    monthly_data = frequency_data['monthly']
+    if monthly_data:
+        print("\nMonthly Launches (recent):")
+        recent_months = sorted(monthly_data.keys(), reverse=True)[:12]
+        for month in recent_months:
+            print(f"  {month}: {monthly_data[month]} launches")
 
 def get_launches(force_refresh: bool = False) -> List[Launch]:
     launches = cache_manager.get_launches(force_refresh)
@@ -21,13 +97,7 @@ def get_launchpads(force_refresh: bool = False) -> List[Launchpad]:
 
 def filter_by_date_range(launches: List[Launch], start_date: date, end_date: date) -> List[Launch]:
     def in_date_range(launch: Launch) -> bool:
-        try:
-            if '.' in launch.date_utc and 'Z' in launch.date_utc:
-                launch_date = datetime.strptime(launch.date_utc, "%Y-%m-%dT%H:%M:%S.%fZ").date()
-            else:
-                launch_date =  datetime.strptime(launch.date_utc, "%Y-%m-%dT%H:%M:%SZ").date()
-        except (ValueError, TypeError):
-            launch_date = date(1900, 1, 1)
+        launch_date = parse_date(launch.date_utc)
         return start_date <= launch_date <= end_date
     
     return list(filter(in_date_range, launches))
@@ -84,7 +154,10 @@ if __name__ == "__main__":
     parser.add_argument("--filter-upcoming", action="store_true", help="Show only upcoming launches")
     parser.add_argument("--start-date", help="Start date for filtering (YYYY-MM-DD)")
     parser.add_argument("--end-date", help="End date for filtering (YYYY-MM-DD)")
-
+    parser.add_argument("--stats", action="store_true", help="Show statistics")
+    parser.add_argument("--success-rates", action="store_true", help="Show success rates by rocket")
+    parser.add_argument("--frequency", action="store_true", help="Show launch frequency")
+    parser.add_argument("--export", choices=["json", "csv"], help="Export data to file")
     
     args = parser.parse_args()
     print(args)
@@ -107,7 +180,20 @@ if __name__ == "__main__":
         filter_args['end_date'] = datetime.strptime(args.end_date, "%Y-%m-%d").date()
     
     filtered_launches = apply_filters(launches, **filter_args)
+    if not any([args.stats, args.success_rates, args.frequency]):
+        display_launches(filtered_launches, rockets, launchpads)
+    
+    if args.stats:
+        stats = get_launch_statistics(filtered_launches)
+        display_statistics(stats)
+    
+    if args.success_rates:
+        success_rates = calculate_success_rate_by_rocket(
+            filtered_launches, rockets
+        )
+        display_success_rates(success_rates)
+    
+    if args.frequency:
+        frequency = calculate_launch_frequency(filtered_launches)
+        display_launch_frequency(frequency)
 
-    print(filtered_launches)
-    # print(rockets)
-    # print(launchpads)
