@@ -41,7 +41,7 @@ class CacheManager:
             # TODO Log
             pass
     
-    def get_launches(self, force_refresh: bool = False) -> List[Launch]:
+    def get_launches(self, force_refresh: bool) -> List[Launch]:
         cache_path = self._get_cache_path("launches")
         
         if not force_refresh and self._is_cache_valid(cache_path):
@@ -56,7 +56,7 @@ class CacheManager:
         
         return launches
     
-    def get_rockets(self, force_refresh: bool = False) -> List[Rocket]:
+    def get_rockets(self, force_refresh: bool) -> List[Rocket]:
         cache_path = self._get_cache_path("rockets")
         
         if not force_refresh and self._is_cache_valid(cache_path):
@@ -71,7 +71,7 @@ class CacheManager:
         
         return rockets
     
-    def get_launchpads(self, force_refresh: bool = False) -> List[Launchpad]:
+    def get_launchpads(self, force_refresh: bool) -> List[Launchpad]:
         cache_path = self._get_cache_path("launchpads")
         
         if not force_refresh and self._is_cache_valid(cache_path):
@@ -85,3 +85,5 @@ class CacheManager:
         self._save_to_cache(cache_path, launchpads_dict)
         
         return launchpads
+
+

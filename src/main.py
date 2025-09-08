@@ -7,16 +7,16 @@ from .models import Launch, Rocket, Launchpad
 
 cache_manager = CacheManager()
 
-def get_launches() -> List[Launch]:
-    launches = cache_manager.get_launches()
+def get_launches(force_refresh: bool = False) -> List[Launch]:
+    launches = cache_manager.get_launches(force_refresh)
     return launches
 
-def get_rockets() -> List[Rocket]:
-    rockets = cache_manager.get_rockets()
+def get_rockets(force_refresh: bool = False) -> List[Rocket]:
+    rockets = cache_manager.get_rockets(force_refresh)
     return rockets
 
-def get_launchpads() -> List[Launchpad]:
-    launchpads = cache_manager.get_launchpads()
+def get_launchpads(force_refresh: bool = False) -> List[Launchpad]:
+    launchpads = cache_manager.get_launchpads(force_refresh)
     return launchpads
 
 def filter_by_date_range(launches: List[Launch], start_date: date, end_date: date) -> List[Launch]:
@@ -77,6 +77,7 @@ def apply_filters(launches: List[Launch], **filters) -> List[Launch]:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="SpaceX Launch Tracker")
+    parser.add_argument("--refresh", action="store_true", help="Force refresh of cached data")
     parser.add_argument("--filter-rocket", help="Filter by rocket ID")
     parser.add_argument("--filter-success", choices=["true", "false"], help="Filter by success status")
     parser.add_argument("--filter-launchpad", help="Filter by launchpad ID")
@@ -87,9 +88,9 @@ if __name__ == "__main__":
     
     args = parser.parse_args()
     print(args)
-    launches = get_launches()
-    rockets = get_rockets()
-    launchpads = get_launchpads()
+    launches = get_launches(force_refresh=args.refresh)
+    rockets = get_rockets(force_refresh=args.refresh)
+    launchpads = get_launchpads(force_refresh=args.refresh)
     
     # Apply filters
     filter_args = {}
