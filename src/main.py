@@ -2,6 +2,7 @@ import argparse
 from datetime import datetime, date
 from typing import List, Dict, Any
 from tabulate import tabulate
+import json
 
 from .cache_manager import CacheManager
 from .models import Launch, Rocket, Launchpad
@@ -82,6 +83,24 @@ def display_launch_frequency(frequency_data: Dict[str, Dict[str, int]]) -> None:
         recent_months = sorted(monthly_data.keys(), reverse=True)[:12]
         for month in recent_months:
             print(f"  {month}: {monthly_data[month]} launches")
+
+def export_data(launches: List[Launch], format: str) -> None:
+    if format == "json":
+        data = [launch.__dict__ for launch in launches]
+        filename = f"spacex_launches_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        with open(filename, 'w') as f:
+            json.dump(data, f, indent=2, default=str)
+        print(f"Data exported to {filename}")
+    elif format == "csv":
+        import csv
+        filename = f"spacex_launches_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+        with open(filename, 'w', newline='') as f:
+            writer = csv.writer(f)
+            if launches:
+                writer.writerow(launches[0].__dict__.keys())
+                for launch in launches:
+                    writer.writerow([str(value) for value in launch.__dict__.values()])
+        print(f"Data exported to {filename}")
 
 def get_launches(force_refresh: bool = False) -> List[Launch]:
     launches = cache_manager.get_launches(force_refresh)
@@ -196,4 +215,7 @@ if __name__ == "__main__":
     if args.frequency:
         frequency = calculate_launch_frequency(filtered_launches)
         display_launch_frequency(frequency)
+
+    if args.export:
+        export_data(filtered_launches, args.export)
 

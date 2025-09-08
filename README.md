@@ -30,3 +30,6 @@ Run
 
 > python -m src.main --filter-upcoming
 
+> python -m src.main --export json
+
+> python -m src.main --export csv
