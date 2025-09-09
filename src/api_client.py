@@ -2,12 +2,16 @@ import requests
 from typing import List, Dict, Any, Optional
 
 from .models import Launch, Rocket, Launchpad
+from .logger import setup_logger
+
+logger = setup_logger("main", level=10)
 
 
 class SpaceXAPIClient:
     BASE_URL = "https://api.spacexdata.com/v4"
     
     def __init__(self):
+        logger.info("Checking the logger")
         self.session = requests.Session()
         self.session.headers.update({
             'User-Agent': 'SpaceXLaunchTracker/1.0'
@@ -21,7 +25,7 @@ class SpaceXAPIClient:
             response.raise_for_status()
             return response.json()
         except requests.exceptions.RequestException as e:
-            pass
+            logger.error("Error while making API request")
     
     def get_all_launches(self) -> List[Launch]:
         data = self._make_request("launches")

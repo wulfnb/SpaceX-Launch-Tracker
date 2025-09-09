@@ -7,6 +7,9 @@ from pathlib import Path
 
 from .api_client import SpaceXAPIClient
 from .models import Launch, Rocket, Launchpad
+from .logger import setup_logger
+
+logger = setup_logger("main", level=10)
 
 
 class CacheManager:
@@ -30,7 +33,7 @@ class CacheManager:
             with open(cache_path, 'r') as f:
                 return json.load(f)
         except (json.JSONDecodeError, IOError) as e:
-            # TODO Log
+            logger.error("Error in decoding cache data")
             return None
     
     def _save_to_cache(self, cache_path: Path, data: Any) -> None:
@@ -38,8 +41,7 @@ class CacheManager:
             with open(cache_path, 'w') as f:
                 json.dump(data, f, default=str, indent=2)
         except IOError as e:
-            # TODO Log
-            pass
+           logger.error("Error saving cache data")
     
     def get_launches(self, force_refresh: bool) -> List[Launch]:
         cache_path = self._get_cache_path("launches")
