@@ -33,3 +33,10 @@ Run
 > python -m src.main --export json
 
 > python -m src.main --export csv
+
+
+
+## Run tests
+
+> PYTHONPATH=. pytest tests/
+
